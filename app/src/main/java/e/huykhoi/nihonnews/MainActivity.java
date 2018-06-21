@@ -4,14 +4,19 @@ import android.app.Activity;
 import android.app.Dialog;
 import android.app.ListActivity;
 import android.app.ProgressDialog;
+import android.app.SearchManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.graphics.Point;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.SearchView;
+import android.util.Base64;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Display;
@@ -24,6 +29,7 @@ import android.widget.ListView;
 import android.widget.TabHost;
 import android.support.v7.widget.Toolbar;
 import android.widget.TabWidget;
+import android.widget.Toast;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -33,6 +39,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.Signature;
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
@@ -41,9 +50,12 @@ public class MainActivity extends AppCompatActivity {
     Toolbar myToolbar;
     ListView[] arrListView = new ListView[CATE_NUM];
     ArrayList<News>[] news = new ArrayList[CATE_NUM];
+    ArrayList<News> searchNews;
+
     NewsAdapter[] adapter = new NewsAdapter[CATE_NUM];
     SharedPreferences sharedPreferences;
     ProgressDialog dialog;
+    int currentTabIndex = 0;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -236,6 +248,15 @@ public class MainActivity extends AppCompatActivity {
                 editor.commit();
             }
         });
+
+        tabHost.setOnTabChangedListener(new TabHost.OnTabChangeListener() {
+
+            @Override
+            public void onTabChanged(String s) {
+                currentTabIndex = tabHost.getCurrentTab();
+            }
+        });
+      //  printKeyHash(MainActivity.this);
     }
 
     private void findViewById() {
@@ -303,7 +324,68 @@ public class MainActivity extends AppCompatActivity {
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.main_menu, menu);
-        return true;
+        SearchManager searchManager = (SearchManager) getSystemService(Context.SEARCH_SERVICE);
+        SearchView searchView = (SearchView) menu.findItem(R.id.searchItem)
+                .getActionView();
+        if (null != searchView) {
+            searchView.setSearchableInfo(searchManager
+                    .getSearchableInfo(getComponentName()));
+            searchView.setIconifiedByDefault(false);
+        }
+
+        SearchView.OnQueryTextListener queryTextListener = new SearchView.OnQueryTextListener() {
+
+            public boolean onQueryTextChange(String newText) {
+                // this is your adapter that will be filtered
+                refreshFromSearchFeed(newText);
+                if(newText.isEmpty()){
+                    refreshFromFeed();
+                }
+                return true;
+            }
+
+            public boolean onQueryTextSubmit(String query) {
+                //Here u can get the value "query" which is entered in the search box.
+                refreshFromSearchFeed(query);
+                return true;
+            }
+        };
+        searchView.setOnQueryTextListener(queryTextListener);
+
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    public static String printKeyHash(Activity context) {
+        PackageInfo packageInfo;
+        String key = null;
+        try {
+            //getting application package name, as defined in manifest
+            String packageName = context.getApplicationContext().getPackageName();
+
+            //Retriving package info
+            packageInfo = context.getPackageManager().getPackageInfo(packageName,
+                    PackageManager.GET_SIGNATURES);
+
+            Log.e("Package Name=", context.getApplicationContext().getPackageName());
+
+            for (android.content.pm.Signature signature : packageInfo.signatures) {
+                MessageDigest md = MessageDigest.getInstance("SHA");
+                md.update(signature.toByteArray());
+                key = new String(Base64.encode(md.digest(), 0));
+
+                // String key = new String(Base64.encodeBytes(md.digest()));
+                Log.e("Key Hash=", key);
+            }
+        } catch (PackageManager.NameNotFoundException e1) {
+            Log.e("Name not found", e1.toString());
+        }
+        catch (NoSuchAlgorithmException e) {
+            Log.e("No such an algorithm", e.toString());
+        } catch (Exception e) {
+            Log.e("Exception", e.toString());
+        }
+
+        return key;
     }
 
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -318,6 +400,17 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void refreshFromSearchFeed(String query){
+        searchNews = new ArrayList<>();
+        for(News searchNew : news[currentTabIndex]){
+            if(searchNew.getTitle().contains(query)) {
+                searchNews.add(searchNew);
+            }
+       }
+        adapter[currentTabIndex] = new NewsAdapter(this,R.layout.line_news_views,searchNews);
+        arrListView[currentTabIndex].setAdapter(adapter[currentTabIndex]);
+    }
+
     private void refreshFromFeed() {
         for (int j = 0; j < CATE_NUM; j++) {
             news[j] = new ArrayList<>();
@@ -326,6 +419,7 @@ public class MainActivity extends AppCompatActivity {
             new readRSS(j).execute("https://www3.nhk.or.jp/rss/news/cat" + j + ".xml");
         }
     }
+
     class readRSS extends AsyncTask<String,Void,String>{
         int taskNumber;
         readRSS(int i){

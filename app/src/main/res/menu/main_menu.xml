@@ -7,6 +7,7 @@
         android:icon="@drawable/ic_search_black_24dp"
         app:showAsAction="ifRoom|collapseActionView"
         app:actionViewClass="android.support.v7.widget.SearchView" />
+
     <item android:id="@+id/updateItem"
         android:title="Update News"
         app:showAsAction="never"

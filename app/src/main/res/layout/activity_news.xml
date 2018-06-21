@@ -9,16 +9,19 @@
 <include
     android:id="@+id/my_toolbar"
     layout="@layout/my_toolbar"/>
+
     <WebView
         android:id="@+id/WebViewNews"
         android:layout_width="0dp"
-        android:layout_height="0dp"
+        android:layout_height="494dp"
         android:layout_marginBottom="4dp"
         android:layout_marginEnd="8dp"
         android:layout_marginStart="8dp"
         android:layout_marginTop="8dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/my_toolbar" />
+
 </android.support.constraint.ConstraintLayout>

@@ -6,7 +6,7 @@
     <item
         android:id="@+id/itemShare"
         android:title="Share Story"
-        android:icon="@drawable/ic_share_black_24dp"
+        android:icon="@drawable/facebook_share_button"
         app:showAsAction="ifRoom"
 
         />
